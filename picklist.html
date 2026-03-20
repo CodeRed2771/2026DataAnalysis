@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scouting Pick List</title>
+    <link rel="stylesheet" href="styles.css" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.js" defer></script>
+    <script src="calculations/fetchdata.js" defer></script>
+    <script src="calculations/opr.js" defer></script>
+    <script src="calculations/calc.js" defer></script>
+
+    <style>
+        /* Side menu styling for the Suitability sliders */
+        .wrapper {
+            display: flex;
+            gap: 20px;
+        }
+        .main-content {
+            flex-grow: 1;
+        }
+        #suitabilityMenu {
+            display: none; /* Hidden by default */
+            width: 250px;
+            background: #f4f4f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            height: fit-content;
+        }
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        .slider-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .slider-group input {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Scouting Pick List</h1>
+
+    <div class="controls">
+        <label for="statSelect">Sort By: </label>
+        <select id="statSelect" onchange="renderTable()">
+            <option value="avgTeleopCycles">Tele Cycles</option>
+            <option value="avgTeleopCycleTime">Tele Cycle Time</option>
+            <option value="teleFuelPerCycle">Tele Fuel/Cycle</option>
+            <option value="avgFireRate">Fire Rate</option>
+            <option value="teleSuccessRate">Tele Climb %</option>
+            <option value="defenseFrequency">Def Freq</option>
+            <option value="avgDefenseScore">Def Score</option>
+            <option value="suitability">Suitability Score</option>
+        </select>
+    </div>
+    
+    <div class="wrapper">
+        <div class="main-content">
+            <div class="table-container">
+                <table id="picklistTable">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th id="dynamicHeader">Statistic</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="suitabilityMenu">
+            <h3>Adjust Weights</h3>
+            <div class="slider-group">
+                <label>Teleop OPR: <span id="wTeleOPRVal">0.5</span></label>
+                <input type="range" id="wTeleOPR" min="0" max="1" step="0.1" value="0.5" oninput="updateSliders()">
+            </div>
+            <div class="slider-group">
+                <label>Auto OPR: <span id="wAutoOPRVal">0.5</span></label>
+                <input type="range" id="wAutoOPR" min="0" max="1" step="0.1" value="0.5" oninput="updateSliders()">
+            </div>
+            <div class="slider-group">
+                <label>Avg Defense: <span id="wDefenseVal">0.5</span></label>
+                <input type="range" id="wDefense" min="0" max="1" step="0.1" value="0.5" oninput="updateSliders()">
+            </div>
+            <div class="slider-group">
+                <label>Avg Cycle Time: <span id="wCycleVal">0.5</span></label>
+                <input type="range" id="wCycle" min="0" max="1" step="0.1" value="0.5" oninput="updateSliders()">
+                <small style="color: #666;">(Subtracts from score)</small>
+            </div>
+        </div>
+    </div>
+
+    <div id="teamModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2 id="modalTeamTitle">Team Stats</h2>
+            <div class="stat-grid" id="modalStatsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Function to update the text labels and re-render the table dynamically
+        function updateSliders() {
+            document.getElementById('wTeleOPRVal').innerText = document.getElementById('wTeleOPR').value;
+            document.getElementById('wAutoOPRVal').innerText = document.getElementById('wAutoOPR').value;
+            document.getElementById('wDefenseVal').innerText = document.getElementById('wDefense').value;
+            document.getElementById('wCycleVal').innerText = document.getElementById('wCycle').value;
+            renderTable(); // Re-sort and render instantly
+        }
+
+        function renderTable() {
+            const selectedStat = document.getElementById('statSelect').value;
+            const headerText = document.querySelector(`#statSelect option[value="${selectedStat}"]`).text;
+            document.getElementById('dynamicHeader').innerText = headerText;
+
+            // Toggle side menu visibility based on selection
+            const sideMenu = document.getElementById('suitabilityMenu');
+            sideMenu.style.display = (selectedStat === 'suitability') ? 'block' : 'none';
+
+            // Get current slider weights
+            const wTele = parseFloat(document.getElementById('wTeleOPR').value);
+            const wAuto = parseFloat(document.getElementById('wAutoOPR').value);
+            const wDef = parseFloat(document.getElementById('wDefense').value);
+            const wCyc = parseFloat(document.getElementById('wCycle').value);
+
+            // Prepare data array from teamData object
+            let tableData = Object.keys(teamData).map(teamNum => {
+                const data = teamData[teamNum];
+                
+                // Extract stats (Assuming teleopOPR and autoOPR are calculated in your opr.js script)
+                const teleOPR = data.teleopOPR || 0; 
+                const autoOPR = data.autoOPR || 0;
+                const defScore = data.avgDefenseScore || 0;
+                const cycTime = data.avgTeleopCycleTime || 0;
+
+                // Calculate Suitability
+                const suitabilityScore = (teleOPR * wTele) + (autoOPR * wAuto) + (defScore * wDef) - (cycTime * wCyc);
+
+                return {
+                    team: parseInt(teamNum),
+                    ...data,
+                    teleFuelPerCycle: data.fuelPerCycle.teleFuelPerCycle,
+                    teleSuccessRate: data.climbSuccessRates.teleSuccessRate,
+                    suitability: suitabilityScore // Add the calculated stat here
+                };
+            });
+
+            // Sort High to Low (If cycle time is selected by itself, we need to sort low to high)
+            if (selectedStat === 'avgTeleopCycleTime') {
+                tableData.sort((a, b) => a[selectedStat] - b[selectedStat]);
+            } else {
+                tableData.sort((a, b) => b[selectedStat] - a[selectedStat]);
+            }
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = ''; 
+
+            tableData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.onclick = () => openModal(row.team);
+                
+                let val = row[selectedStat];
+                let displayVal;
+                
+                if (selectedStat.includes('Rate') || selectedStat.includes('Frequency')) {
+                    displayVal = (val * 100).toFixed(0) + '%';
+                } else if (selectedStat === 'suitability') {
+                    displayVal = val.toFixed(2) + ' pts'; // Distinct formatting for suitability
+                } else {
+                    displayVal = val.toFixed(2);
+                }
+
+                tr.innerHTML = `
+                    <td><strong>${row.team}</strong></td>
+                    <td>${displayVal}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModal(teamNum) {
+            const data = teamData[teamNum];
+            document.getElementById('modalTeamTitle').innerText = `Team ${teamNum} - Detailed Stats`;
+            
+            const grid = document.getElementById('modalStatsGrid');
+            
+            // Re-rendering all original stats into the modal
+            grid.innerHTML = `
+                <div class="stat-box"><strong>Cycle Performance</strong><br>
+                    Avg Tele Cycles: ${data.avgTeleopCycles.toFixed(2)}<br>
+                    Avg Cycle Time: ${data.avgTeleopCycleTime.toFixed(2)}s
+                </div>
+                <div class="stat-box"><strong>Fuel & Shooting</strong><br>
+                    Auto Fuel/Cyc: ${data.fuelPerCycle.autoFuelPerCycle.toFixed(2)}<br>
+                    Tele Fuel/Cyc: ${data.fuelPerCycle.teleFuelPerCycle.toFixed(2)}<br>
+                    Fire Rate: ${data.avgFireRate.toFixed(2)} f/s<br>
+                    Shooting Time: ${data.avgShootingTime.toFixed(2)}s
+                </div>
+                <div class="stat-box"><strong>Climbing</strong><br>
+                    Auto Success: ${(data.climbSuccessRates.autoSuccessRate * 100).toFixed(0)}%<br>
+                    Tele Success: ${(data.climbSuccessRates.teleSuccessRate * 100).toFixed(0)}%<br>
+                    Avg Climb Time: ${data.avgClimbTime.toFixed(2)}s<br>
+                    Fav Location: ${data.favoriteClimb.teleLocation}
+                </div>
+                <div class="stat-box"><strong>Defense</strong><br>
+                    Frequency: ${(data.defenseFrequency * 100).toFixed(0)}%<br>
+                    Avg Score: ${data.avgDefenseScore.toFixed(2)} / 5
+                </div>
+            `;
+            
+            document.getElementById('teamModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('teamModal').style.display = 'none';
+        }
+
+        window.onclick = (event) => {
+            if (event.target == document.getElementById('teamModal')) closeModal();
+        }
+
+        // Logic to wait for data scripts to load
+        window.onload = () => {
+            if (typeof teamData !== 'undefined') renderTable();
+        };
+    </script>
+</body>
+</html>
