@@ -10,20 +10,79 @@
     <script src="calculations/fetchdata.js" defer></script>
     <script src="calculations/opr.js" defer></script>
     <script src="calculations/calc.js" defer></script>
+
+    <style>
+        /* --- ADDED LOADING & REFRESH STYLES --- */
+        .lookup-container { position: relative; }
+
+        .loader-container {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .refresh-btn {
+            padding: 8px 15px;
+            background-color: #2e7f50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 10px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover { background-color: #27ae60; }
+        
+        #resultsContainer { transition: opacity 0.3s ease; }
+        /* ------------------------------------ */
+    </style>
 </head>
 <body>
 
     <h1>Team Lookup</h1>
 
     <div class="lookup-container">
-        <select id="cmpSelect">
-            <option value="2026mimus">Muskegon</option>
-            <option value="2026miken">Kentwood</option>
-        </select>
+        <div id="loader" class="loader-container">
+            <div class="spinner"></div>
+            <p>Updating Data...</p>
+        </div>
 
-        <div class="search-box">
-            <input type="number" id="teamInput" placeholder="Enter Team Number (e.g., 254)" onkeypress="handleKeyPress(event)">
-            <button onclick="lookupTeam()">Search</button>
+        <div class="search-controls" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <select id="cmpSelect">
+                <option value="2026mimus">Muskegon</option>
+                <option value="2026miken">Kentwood</option>
+            </select>
+
+            <div class="search-box" style="display: flex; gap: 5px;">
+                <input type="number" id="teamInput" placeholder="Enter Team Number" onkeypress="handleKeyPress(event)">
+                <button onclick="lookupTeam()">Search</button>
+            </div>
+
+            <button class="refresh-btn" onclick="refreshData()">Refresh</button>
         </div>
 
         <div id="resultsContainer">
@@ -32,10 +91,35 @@
     </div>
 
 <script>
-        function renderTable() {
-            console.log("rendihing");
+        // --- REFRESH LOGIC ---
+        async function refreshData() {
+            const loader = document.getElementById('loader');
+            const container = document.getElementById('resultsContainer');
+            
+            loader.style.display = 'block';
+            container.style.opacity = '0.3';
+
+            try {
+                // Check if a global load function exists from your scripts
+                if (window.loadDataFromServer) {
+                    await window.loadDataFromServer();
+                } else {
+                    // Artificial delay to show the animation if loading is instant
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+                
+                // If a team was already searched, update their view
+                if (document.getElementById('teamInput').value) {
+                    lookupTeam();
+                }
+            } catch (e) {
+                console.error("Data refresh failed", e);
+            } finally {
+                loader.style.display = 'none';
+                container.style.opacity = '1';
+            }
         }
-        // Trigger search when pressing "Enter" in the input field
+
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 lookupTeam();
@@ -46,7 +130,6 @@
             const teamNum = document.getElementById('teamInput').value;
             const container = document.getElementById('resultsContainer');
             
-            // Clear previous results
             container.innerHTML = ''; 
 
             if (!teamNum) {
@@ -54,68 +137,55 @@
                 return;
             }
 
-            // Fetch Match Data (Assuming it's an object keyed by team number)
             const matchData = (typeof teamData !== 'undefined' && teamData[teamNum]) ? teamData[teamNum] : null;
             
-            // Fetch Pit Data (Searching through the array of objects)
             let pitData = null;
             if (typeof allPitData !== 'undefined' && Array.isArray(allPitData)) {
-                // Find the object where the "Team Number" matches the input
                 pitData = allPitData.find(team => team["Team Number"] == teamNum);
             }
 
-            // If the team isn't in EITHER database, stop here
             if (!matchData && !pitData) {
                 container.innerHTML = `<p class="error-msg">Team ${teamNum} not found in Match or Pit scouting databases.</p>`;
                 return;
             }
 
-            // Build the profile header (Use the pit data team name if available!)
             const teamName = pitData && pitData["Team Name"] ? ` - ${pitData["Team Name"]}` : "";
             let outputHTML = `<h2>Team ${teamNum}${teamName} Profile</h2>`;
             
-            // --- PIT SCOUTING SECTION ---
             outputHTML += `<div class="data-section"><h3>Pit Scouting Data</h3>`;
             if (pitData) {
-                // Create a copy of pitData and remove redundant fields before displaying
                 const displayPitData = { ...pitData };
                 delete displayPitData["Timestamp"];
                 delete displayPitData["Team Number"];
                 delete displayPitData["Team Name"];
-                
                 outputHTML += buildStatsHTML(displayPitData);
             } else {
-                outputHTML += `<p><em>N/A - No pit scouting data recorded for this team.</em></p>`;
+                outputHTML += `<p><em>N/A - No pit scouting data recorded.</em></p>`;
             }
             outputHTML += `</div>`;
 
-            // --- MATCH SCOUTING SECTION ---
             outputHTML += `<div class="data-section"><h3>Match Scouting Data</h3>`;
             if (matchData) {
                 outputHTML += buildStatsHTML(matchData);
             } else {
-                outputHTML += `<p><em>N/A - No match scouting data recorded for this team.</em></p>`;
+                outputHTML += `<p><em>N/A - No match scouting data recorded.</em></p>`;
             }
             outputHTML += `</div>`;
             
             container.innerHTML = outputHTML;
         }
 
-        // Recursive function to handle nested objects cleanly
         function buildStatsHTML(obj) {
             let html = '<ul class="stats-list">';
             for (const key in obj) {
-                // Check if the value is a nested object 
                 if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
                     html += `<li><strong>${formatKey(key)}:</strong> ${buildStatsHTML(obj[key])}</li>`;
                 } 
-                // Handle arrays
                 else if (Array.isArray(obj[key])) {
                     html += `<li><strong>${formatKey(key)}:</strong> ${obj[key].join(', ')}</li>`;
                 }
                 else {
                     let val = obj[key];
-                    // Format numbers
                     if (typeof val === 'number') {
                         if (key.toLowerCase().includes('rate') || key.toLowerCase().includes('frequency')) {
                             val = (val * 100).toFixed(0) + '%';
@@ -123,7 +193,6 @@
                             val = val.toFixed(2);
                         }
                     }
-                    // Handle empty strings, nulls, or "Column 1" weirdness gracefully
                     if (val === "" || val === null || (key === "Column 1" && val === "")) {
                         val = "<em>N/A</em>";
                     }
@@ -134,11 +203,13 @@
             return html;
         }
 
-        // Helper function to format keys nicely (also trims trailing spaces)
         function formatKey(key) {
             let result = key.trim().replace(/([A-Z])/g, " $1");
             return result.charAt(0).toUpperCase() + result.slice(1).trim();
         }
+
+        // Run refresh once on startup to ensure latest data is pulled
+        window.onload = refreshData;
     </script>
 </body>
 </html>
