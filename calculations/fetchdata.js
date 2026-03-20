@@ -57,4 +57,4 @@ async function pullAllData(eventkey) {
   }
 }
 
-pullAllData("2026cahal");
+pullAllData(document.getElementById("cmpSelect").value || "2026mimus");
