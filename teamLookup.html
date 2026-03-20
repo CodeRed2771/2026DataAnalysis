@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Lookup</title>
+    <link rel="stylesheet" href="styles.css" type="text/css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.js" defer></script>
+    <script src="calculations/fetchdata.js" defer></script>
+    <script src="calculations/opr.js" defer></script>
+    <script src="calculations/calc.js" defer></script>
+</head>
+<body>
+
+    <h1>Team Lookup</h1>
+
+    <div class="lookup-container">
+        <div class="search-box">
+            <input type="number" id="teamInput" placeholder="Enter Team Number (e.g., 254)" onkeypress="handleKeyPress(event)">
+            <button onclick="lookupTeam()">Search</button>
+        </div>
+
+        <div id="resultsContainer">
+            <p>Enter a team number above to see their full profile.</p>
+        </div>
+    </div>
+
+<script>
+        // Trigger search when pressing "Enter" in the input field
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                lookupTeam();
+            }
+        }
+
+        function lookupTeam() {
+            const teamNum = document.getElementById('teamInput').value;
+            const container = document.getElementById('resultsContainer');
+            
+            // Clear previous results
+            container.innerHTML = ''; 
+
+            if (!teamNum) {
+                container.innerHTML = '<p class="error-msg">Please enter a team number.</p>';
+                return;
+            }
+
+            // Fetch Match Data (Assuming it's an object keyed by team number)
+            const matchData = (typeof teamData !== 'undefined' && teamData[teamNum]) ? teamData[teamNum] : null;
+            
+            // Fetch Pit Data (Searching through the array of objects)
+            let pitData = null;
+            if (typeof allPitData !== 'undefined' && Array.isArray(allPitData)) {
+                // Find the object where the "Team Number" matches the input
+                pitData = allPitData.find(team => team["Team Number"] == teamNum);
+            }
+
+            // If the team isn't in EITHER database, stop here
+            if (!matchData && !pitData) {
+                container.innerHTML = `<p class="error-msg">Team ${teamNum} not found in Match or Pit scouting databases.</p>`;
+                return;
+            }
+
+            // Build the profile header (Use the pit data team name if available!)
+            const teamName = pitData && pitData["Team Name"] ? ` - ${pitData["Team Name"]}` : "";
+            let outputHTML = `<h2>Team ${teamNum}${teamName} Profile</h2>`;
+            
+            // --- PIT SCOUTING SECTION ---
+            outputHTML += `<div class="data-section"><h3>Pit Scouting Data</h3>`;
+            if (pitData) {
+                // Create a copy of pitData and remove redundant fields before displaying
+                const displayPitData = { ...pitData };
+                delete displayPitData["Timestamp"];
+                delete displayPitData["Team Number"];
+                delete displayPitData["Team Name"];
+                
+                outputHTML += buildStatsHTML(displayPitData);
+            } else {
+                outputHTML += `<p><em>N/A - No pit scouting data recorded for this team.</em></p>`;
+            }
+            outputHTML += `</div>`;
+
+            // --- MATCH SCOUTING SECTION ---
+            outputHTML += `<div class="data-section"><h3>Match Scouting Data</h3>`;
+            if (matchData) {
+                outputHTML += buildStatsHTML(matchData);
+            } else {
+                outputHTML += `<p><em>N/A - No match scouting data recorded for this team.</em></p>`;
+            }
+            outputHTML += `</div>`;
+            
+            container.innerHTML = outputHTML;
+        }
+
+        // Recursive function to handle nested objects cleanly
+        function buildStatsHTML(obj) {
+            let html = '<ul class="stats-list">';
+            for (const key in obj) {
+                // Check if the value is a nested object 
+                if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                    html += `<li><strong>${formatKey(key)}:</strong> ${buildStatsHTML(obj[key])}</li>`;
+                } 
+                // Handle arrays
+                else if (Array.isArray(obj[key])) {
+                    html += `<li><strong>${formatKey(key)}:</strong> ${obj[key].join(', ')}</li>`;
+                }
+                else {
+                    let val = obj[key];
+                    // Format numbers
+                    if (typeof val === 'number') {
+                        if (key.toLowerCase().includes('rate') || key.toLowerCase().includes('frequency')) {
+                            val = (val * 100).toFixed(0) + '%';
+                        } else if (!Number.isInteger(val)) {
+                            val = val.toFixed(2);
+                        }
+                    }
+                    // Handle empty strings, nulls, or "Column 1" weirdness gracefully
+                    if (val === "" || val === null || (key === "Column 1" && val === "")) {
+                        val = "<em>N/A</em>";
+                    }
+                    html += `<li><strong>${formatKey(key)}:</strong> ${val}</li>`;
+                }
+            }
+            html += '</ul>';
+            return html;
+        }
+
+        // Helper function to format keys nicely (also trims trailing spaces)
+        function formatKey(key) {
+            let result = key.trim().replace(/([A-Z])/g, " $1");
+            return result.charAt(0).toUpperCase() + result.slice(1).trim();
+        }
+    </script>
+</body>
+</html>

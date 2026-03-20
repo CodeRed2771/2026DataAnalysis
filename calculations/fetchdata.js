@@ -1,5 +1,6 @@
 let allMatches;
 let allHPData;
+let allPitData;
 
 let autORPS;
 let teleOPRS;
@@ -7,7 +8,7 @@ let teleOPRS;
 let teamData = {};
 
 async function pullAllData(eventkey) {
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwYk1fDCKE4uAorI7jGhxvAYgl-vlA03ttqBZDOqD_Y-iU5vOwcbkVgv2N392wicT09Wg/exec";
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyM8ljOtcp3JjrknMPxd8OnTcHyyeFyLLQQtehJA7h1J24a9bNTKj4HHUMuQ5uVWvX4/exec";
 
   try {
     const response = await fetch(WEB_APP_URL);
@@ -16,7 +17,8 @@ async function pullAllData(eventkey) {
     // Pulling them into their own arrays
     allMatches = data.matchData;
     allHPData = data.hpData;
-
+    allPitData = data.pitData;
+    console.log(allPitData)
     console.log(allMatches)
 
     teleOPRS = await teleopOPRS(eventkey, "3rTF5gxmIdJSYKqhKohNTzEKl7D9x04ivAFGYzOumRgHdqIA6acFssENXYNkfCK7");

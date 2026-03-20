@@ -22,7 +22,6 @@
         #suitabilityMenu {
             display: none; /* Hidden by default */
             width: 250px;
-            background: #f4f4f9;
             padding: 15px;
             border-radius: 8px;
             border: 1px solid #ddd;
@@ -44,8 +43,11 @@
 <body>
 
     <h1>Scouting Pick List</h1>
-
     <div class="controls">
+        <select id="cmpSelect">
+            <option value="2026mimus">Muskegon</option>
+            <option value="2026miken">Kentwood</option>
+        </select>        
         <label for="statSelect">Sort By: </label>
         <select id="statSelect" onchange="renderTable()">
             <option value="suitability">Suitability Score</option>
