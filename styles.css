@@ -8,7 +8,7 @@ body {
 
 h1 { text-align: center; color: #ffffff; }
 
-.controls, #suitabilityMenu {
+.controls {
     max-width: 600px;
     margin: 0 auto 20px auto;
     text-align: center;
@@ -16,6 +16,10 @@ h1 { text-align: center; color: #ffffff; }
     padding: 15px;
     border-radius: 8px;
     border: 1px solid #333;
+}
+
+#suitabilityMenu {
+    background: #1e1e1e;
 }
 
 select {

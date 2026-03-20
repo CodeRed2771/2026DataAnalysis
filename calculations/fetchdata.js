@@ -40,7 +40,9 @@ async function pullAllData(eventkey) {
         avgShootingTime: analyzer.getAverageTimeSpentShooting(teamNum),
         avgFireRate: analyzer.getAverageFireRate(teamNum),
         defenseFrequency: analyzer.getDefenseRate(teamNum),
-        avgDefenseScore: analyzer.getAverageDefenseScore(teamNum)
+        avgDefenseScore: analyzer.getAverageDefenseScore(teamNum),
+        teleopOPR: teleOPRS[`frc${teamNum}`],
+        autoOPR: autOPRS[`frc${teamNum}`]
       };
     });
 
@@ -53,4 +55,4 @@ async function pullAllData(eventkey) {
   }
 }
 
-pullAllData("2026mimus");
+pullAllData("2026cahal");

@@ -77,6 +77,5 @@ async function autoOPRS(eventKey, apiKey) {
   });
 
   const data = await res.json();
-
-  return data.totalAutoPoints;
+  return data["Hub Auto Fuel Count"];
 }
