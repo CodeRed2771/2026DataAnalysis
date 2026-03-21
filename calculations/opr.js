@@ -18,7 +18,7 @@ async function teleopOPRS(eventKey, apiKey) {
   });
 
   data.forEach(match => {
-    if (!match.alliances) return;
+    if (!match.actual_time) { return };
     console.log(match)
     // TBA match numbers are usually found in match.match_number
     const matchNum = match.match_number;
@@ -100,7 +100,7 @@ async function overallOPRS(eventKey, apiKey) {
   });
 
   data.forEach(match => {
-    if (!match.alliances) return;
+    if (!match.actual_time) console.log("dig yo");
     console.log(match)
     // TBA match numbers are usually found in match.match_number
     const matchNum = match.match_number;
