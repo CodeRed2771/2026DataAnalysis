@@ -4,6 +4,7 @@ let allPitData;
 
 let autORPS;
 let teleOPRS;
+let overOPRS;
 
 let teamData = {};
 
@@ -23,7 +24,7 @@ async function pullAllData(eventkey) {
 
     teleOPRS = await teleopOPRS(eventkey, "3rTF5gxmIdJSYKqhKohNTzEKl7D9x04ivAFGYzOumRgHdqIA6acFssENXYNkfCK7");
     autOPRS = await autoOPRS(eventkey, "3rTF5gxmIdJSYKqhKohNTzEKl7D9x04ivAFGYzOumRgHdqIA6acFssENXYNkfCK7")
-
+    overOPRS = await overallOPRS(eventkey, "3rTF5gxmIdJSYKqhKohNTzEKl7D9x04ivAFGYzOumRgHdqIA6acFssENXYNkfCK7")
     
     const analyzer = new TeamAnalyzer(allMatches, autOPRS, teleOPRS);
 
@@ -44,7 +45,8 @@ async function pullAllData(eventkey) {
         defenseFrequency: analyzer.getDefenseRate(teamNum),
         avgDefenseScore: analyzer.getAverageDefenseScore(teamNum),
         teleopOPR: teleOPRS[`frc${teamNum}`],
-        autoOPR: autOPRS[`frc${teamNum}`]
+        autoOPR: autOPRS[`frc${teamNum}`],
+        overOPR: overOPRS[`frc${teamNum}`]
       };
     });
 
